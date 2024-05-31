@@ -47,6 +47,9 @@ async def aggregate_month(payments, dt_from: datetime, dt_upto: datetime):
 async def aggregate_hour(payments: list, dt_from: datetime, dt_upto: datetime):
     daily_hourly_payments = defaultdict(lambda: defaultdict(int))
 
+    # Sort payments by time before processing
+    payments.sort(key=lambda payment: (payment.dt.date(), payment.dt.hour))
+
     for payment in payments:
         day = payment.dt.date()
         hour = payment.dt.hour
