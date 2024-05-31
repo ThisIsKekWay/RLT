@@ -27,11 +27,12 @@ async def start(msg: types.Message):
 @aggregation_router.message(F.text)
 async def get_message(msg: types.Message):
     content = msg.text
-    await aggregator.init()
+    print(msg.text)
     try:
         data = await aggregator.get_payload(content)
         result = await aggregator.aggregate_pool(data)
-        await msg.answer(str(result))
+        print(result)
+        await msg.answer(result)
     except ParsingFailedException as e:
         await msg.answer(e.message)
     except WrongDateException as e:

@@ -11,7 +11,7 @@ async def get_payload(payload: str) -> dict:
     return aggregation_payload
 
 
-async def aggregate_pool(data: dict) -> dict:
+async def aggregate_pool(data: dict) -> str:
     dt_from = datetime.strptime(data["dt_from"], '%Y-%m-%dT%H:%M:%S')
     dt_upto = datetime.strptime(data["dt_upto"], '%Y-%m-%dT%H:%M:%S')
     if dt_from > dt_upto:
@@ -41,7 +41,7 @@ async def aggregate_month(payments, dt_from: datetime, dt_upto: datetime):
     dataset = list(monthly_payments.values())
     labels = [f"{dt_from.year}-{str(month_key).zfill(2)}-01T00:00:00" for month_key in monthly_payments.keys()]
 
-    return {"dataset": dataset, "labels": labels}
+    return json.dumps({"dataset": dataset, "labels": labels})
 
 
 async def aggregate_hour(payments: list, dt_from: datetime, dt_upto: datetime):
@@ -64,28 +64,22 @@ async def aggregate_hour(payments: list, dt_from: datetime, dt_upto: datetime):
 
         current_day += timedelta(days=1)
 
-    return {"dataset": hourly_dataset[:25], "labels": hourly_labels[:25]}
+    return json.dumps({"dataset": hourly_dataset[:25], "labels": hourly_labels[:25]})
 
 
 async def aggregate_day(payments: list, dt_from: datetime, dt_upto: datetime):
     daily_payments = defaultdict(int)
-    for payment in payments:
-        day = payment.dt.day
-        month_day_key = (payment.dt.month, day)
-        daily_payments[month_day_key] += payment.value
+    current_date = dt_from
+    while current_date <= dt_upto:
+        daily_payments[(current_date.month, current_date.day)] = sum(
+            payment.value for payment in payments if payment.dt.date() == current_date.date()
+        )
+        current_date += timedelta(days=1)
 
-    start_month = dt_from.month
-    end_month = dt_upto.month
-    start_day = dt_from.day
-    end_day = dt_upto.day
-    month_day_combinations = [(month, day) for month in range(start_month, end_month + 1) for day in
-                              range(start_day, end_day + 1)]
+    daily_dataset = list(daily_payments.values())
+    daily_labels = [f"{dt_from.year}-{str(month).zfill(2)}-{str(day).zfill(2)}T00:00:00" for month, day in daily_payments.keys()]
 
-    daily_dataset = [daily_payments.get((month, day), 0) for month, day in month_day_combinations]
-    daily_labels = [f"{dt_from.year}-{str(month).zfill(2)}-{str(day).zfill(2)}T00:00:00" for month, day in
-                    month_day_combinations]
-
-    return {"dataset": daily_dataset, "labels": daily_labels}
+    return json.dumps({"dataset": daily_dataset, "labels": daily_labels})
 
 
 data = '{"dt_from":"2022-09-01T00:00:00", "dt_upto":"2022-12-31T23:59:00", "group_type":"month"}'
