@@ -2,7 +2,7 @@ from typing import Text
 import aggregator
 from aiogram import Router, types, F
 from aiogram.filters import Command
-
+from exceptions import ParsingFailedException, WrongDateException
 aggregation_router = Router()
 
 
@@ -27,6 +27,12 @@ async def start(msg: types.Message):
 @aggregation_router.message(F.text)
 async def get_message(msg: types.Message):
     content = msg.text
-    data = await aggregator.get_payload(content)
-    result = await aggregator.aggregate_pool(data)
-    await msg.answer(str(result))
+    await aggregator.init()
+    try:
+        data = await aggregator.get_payload(content)
+        result = await aggregator.aggregate_pool(data)
+        await msg.answer(str(result))
+    except ParsingFailedException as e:
+        await msg.answer(e.message)
+    except WrongDateException as e:
+        await msg.answer(e.message)
